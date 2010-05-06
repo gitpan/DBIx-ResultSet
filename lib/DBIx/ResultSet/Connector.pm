@@ -1,6 +1,6 @@
 package DBIx::ResultSet::Connector;
 BEGIN {
-  $DBIx::ResultSet::Connector::VERSION = '0.10';
+  $DBIx::ResultSet::Connector::VERSION = '0.11';
 }
 use Moose;
 use namespace::autoclean;
@@ -11,6 +11,8 @@ DBIx::ResultSet::Connector - Access result sets via DBIx::Connector.
 
 =head1 SYNOPSIS
 
+    use DBIx::ResultSet::Connector;
+    
     # Same arguments as DBI and DBIx::Connector.
     my $connector = DBIx::ResultSet::Connector->new(
         $dsn, $user, $pass,
@@ -160,8 +162,6 @@ has 'dbix_connector' => (
 =head2 abstract
 
 A L<SQL::Abstract::Limit> object for use by L<DBIx::ReesultSet>.
-The insert(), update(), delete(), select(), and values() methods
-are proxied.
 
 =cut
 
@@ -184,7 +184,7 @@ sub _build_abstract {
 
 =head2 datetime_formatter
 
-    my $formatter = $meld->datetime_formatter();
+    my $formatter = $connector->datetime_formatter();
     print $formatter->format_date( DateTime->now() );
 
 This returns the DateTime::Format::* class that is appropriate for
@@ -219,3 +219,14 @@ sub _build_datetime_formatter {
 
 __PACKAGE__->meta->make_immutable;
 1;
+__END__
+
+=head1 AUTHOR
+
+Aran Clary Deltac <bluefeet@gmail.com>
+
+=head1 LICENSE
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+

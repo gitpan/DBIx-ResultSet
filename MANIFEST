@@ -6,6 +6,7 @@ Makefile.PL
 README
 lib/DBIx/ResultSet.pm
 lib/DBIx/ResultSet/Connector.pm
+lib/DBIx/ResultSet/Cookbook.pod
 t/00-compile.t
 t/abstract.t
 t/connector.t

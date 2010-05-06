@@ -1,6 +1,6 @@
 package DBIx::ResultSet;
 BEGIN {
-  $DBIx::ResultSet::VERSION = '0.10';
+  $DBIx::ResultSet::VERSION = '0.11';
 }
 use Moose;
 use namespace::autoclean;
@@ -11,7 +11,13 @@ DBIx::ResultSet - Lightweight SQL query building and execution.
 
 =head1 SYNOPSIS
 
-    my $connector = DBIx::ResultSet::Connector->new( $dsn, $user, $pass );
+    use DBIx::ResultSet::Connector;
+    
+    # Same arguments as DBI and DBIx::Connector.
+    my $connector = DBIx::ResultSet::Connector->new(
+        $dsn, $user, $pass,
+        $attr, #optional
+    );
     
     my $users = $connector->resultset('users');
     my $adult_users = $users->search({ age => {'>=', 18} });
@@ -23,7 +29,7 @@ DBIx::ResultSet - Lightweight SQL query building and execution.
 
 This module provides an API that simpliefies the creation and execution
 of SQL queries.  This is done by providing a thin wrapper around the
-L<SQL::Abstract>, L<DBIx::Connector>, L<DBI>, L<Data::Page>, and
+L<SQL::Abstract>, L<DBIx::Connector>, L<DBI>, L<Data::Page>, and the
 DateTime::Format::* modules.
 
 I was inspired to write this module because I work in an environment
@@ -107,15 +113,22 @@ sub _dbi_prepare {
     });
 }
 
+sub _set_pager {
+    my ($self) = @_;
+
+    if ($self->clauses->{page}) {
+        $self->clauses->{limit}  = $self->pager->entries_per_page();
+        $self->clauses->{offset} = $self->pager->skipped();
+    }
+
+    return;
+}
+
 sub _do_select {
     my ($self, $fields) = @_;
 
+    $self->_set_pager();
     my $clauses = $self->clauses();
-
-    if ($self->clauses->{page}) {
-        $clauses->{limit}  = $self->pager->entries_per_page();
-        $clauses->{offset} = $self->pager->skipped();
-    }
 
     return $self->abstract->select(
         $self->table(), $fields, $self->where(),
@@ -129,9 +142,11 @@ sub _do_select {
 
 =head2 insert
 
-    $rs->insert(
+    $users_rs->insert(
         { user_name=>'bob2003', email=>'bob@example.com' }, # fields to insert
     );
+
+Creates and executes an INSERT statement.
 
 =cut
 
@@ -144,9 +159,11 @@ sub insert {
 
 =head2 update
 
-    $rs->update(
+    $users_rs->update(
         { phone => '555-1234' }, # fields to update
     );
+
+Creates and executes an UPDATE statement.
 
 =cut
 
@@ -159,7 +176,13 @@ sub update {
 
 =head2 delete
 
-    $rs->delete();
+    # Delete all users!
+    $users_rs->delete();
+    
+    # Or just the ones that are disabled.
+    #users_rs->search({status=>0})->delete();
+
+Creates and executes a DELETE statement.
 
 =cut
 
@@ -172,9 +195,16 @@ sub delete {
 
 =head2 array_row
 
-    my $user = $rs->array_row(
-        ['user_id', 'created', 'email', 'phone'], # fields to retrieve
+    my $user = $users_rs->search({ user_id => 32 })->array_row(
+        ['created', 'email', 'phone'], # fields to retrieve
     );
+    print $user->[1]; # email
+
+Creates and executes a SELECT statement and then returns an
+array reference.  The array will contain only the first row
+that is retrieved, so you'll normally be doing this on a
+resultset that has already been limited to a single row by
+looking up by the table's primary key(s).
 
 =cut
 
@@ -186,9 +216,13 @@ sub array_row {
 
 =head2 hash_row
 
-    my $user = $rs->hash_row(
-        ['user_id', 'created'],     # fields to retrieve
+    my $user = $users_rs->search({ user_id => 32 })->hash_row(
+        ['created', 'email', 'phone'], # fields to retrieve
     );
+    print $user->{email}; # email
+
+This works just the same as array_row(), above, but instead
+it returns a hash ref.
 
 =cut
 
@@ -200,7 +234,7 @@ sub hash_row {
 
 =head2 array_of_array_rows
 
-    my $disabled_users = $rs->array_of_array_rows(
+    my $disabled_users = $users_rs->array_of_array_rows(
         ['user_id', 'email', 'phone'], # fields to retrieve
     );
     print $disabled_users->[2]->[1];
@@ -222,6 +256,8 @@ sub array_of_array_rows {
     );
     print $disabled_users->[2]->{email};
 
+Returns an array ref of hash refs, one for each row.
+
 =cut
 
 sub array_of_hash_rows {
@@ -238,6 +274,10 @@ sub array_of_hash_rows {
     );
     print $disabled_users->{jsmith}->{email};
 
+Returns a hash ref where the key is the value of the column
+that you specify as the first argument, and the value is a
+hash ref contains that row's data.
+
 =cut
 
 sub hash_of_hash_rows {
@@ -252,7 +292,9 @@ sub hash_of_hash_rows {
 
 =head2 count
 
-    my $enabled_users_count = $rs->count();
+    my $total_users = $users_rs->count();
+
+Returns that number of records that match the resultset.
 
 =cut
 
@@ -265,9 +307,13 @@ sub count {
 
 =head2 column
 
-    my $user_ids = $rs->column(
+    my $user_ids = $users_rs->column(
         'user_id',                          # column to retrieve
     );
+    print 'User IDs: ' . join( ', ', @$user_ids );
+
+Returns an array ref containing a single column's value for all
+matching rows.
 
 =cut
 
@@ -329,8 +375,8 @@ sub insert_sth {
 
 =head2 bind_values
 
-This mehtod is a non-modifying wrapper around L<SQL::Abstract>'s values()
-method to be used in conjunction with insert_sth().
+This mehtod calls L<SQL::Abstract>'s values() method.  Normally this
+will be used in conjunction with insert_sth().
 
 =cut
 
@@ -339,9 +385,52 @@ sub bind_values {
     return $self->abstract->values( $fields );
 }
 
+=head2 select_sql
+
+    my ($sql, @bind) = $users_rs->select_sql(['email', 'age']);
+
+Returns the SQL and bind values for a SELECT statement.  This is
+useful if you want to handle DBI yourself, or for building subselects.
+See the L<DBIx::ResultSet::Cookbook> for examples of subselects.
+
+=cut
+
+sub select_sql {
+    my ($self, $fields) = @_;
+    return $self->_do_select( $fields );
+}
+
+=head2 where_sql
+
+    my ($sql, @bind) = $users_rs->where_sql(['user_id', 'email', 'address']);
+
+This works just like select_sql(), but it only returns the
+WHERE portion of the SQL query.  This can be useful when you are
+doing complex joins where you need to write raw SQL, but you still
+want to build up your WHERE clause without writing SQL.
+
+Note, that if order_by, limit, offset, rows, or page clauses or specified
+then the returned SQL will include those clauses as well.
+
+=cut
+
+sub where_sql {
+    my ($self, $fields) = @_;
+    $self->_set_pager();
+    my $clauses = $self->clauses();
+    return $self->abstract->where(
+        $self->where(),
+        $clauses->{order_by},
+        $clauses->{limit},
+        $clauses->{offset},
+    );
+}
+
 =head1 ATTRIBUTES
 
 =head2 connector
+
+The L<DBIx::ResultSet::Connector> object.
 
 =cut
 
@@ -438,3 +527,14 @@ has 'clauses' => (
 
 __PACKAGE__->meta->make_immutable;
 1;
+__END__
+
+=head1 AUTHOR
+
+Aran Clary Deltac <bluefeet@gmail.com>
+
+=head1 LICENSE
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+

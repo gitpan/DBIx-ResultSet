@@ -1,0 +1,71 @@
+
+=head1 NAME
+
+DBIx::ResultSet::Cookbook - Common recipes for DBIx::ResultSet.
+
+=head1 RECIPES
+
+=head2 JOINing
+
+Joins are currently not supported.  This is mostly because L<SQL::Abstract>
+does not support them, and I've yet to have the time or impetus to try
+and dig in to how L<DBIx::Class::ResultSet> does it.  Also, in many cases
+a subselect is a better choice.
+
+Another option is to use L<DBIx::ResultSet>'s where_sql() to produce the WHERE
+portion of the SQL while still being able to write the FROM/JOIN portion of the SQL
+with raw SQL.  For example:
+
+    my ($where_sql, @bind) = $users_rs->search({ 'u.status' => 1});
+    
+    my $sth = $dbh->prepare(qq[
+        SELECT u.user_id, e.sent_date
+        FROM users u
+        JOIN emails e ON (e.user_id = u.user_id)
+        $where_sql
+    ]);
+    
+    $sth->execute( @bind );
+
+=head2 Subselects
+
+L<SQL::Abstract> supports subselects natively, and L<DBIx::ResultSet> provides
+a very elegant way to use them:
+
+    my $emailed_users_rs = $users_rs->search({
+        user_id => {-in => \[ $emails_rs->select_sql(['user_id']) ]},
+    });
+
+The above example build a SQL query like this:
+
+    SELECT *
+    FROM users
+    WHERE user_id IN (
+        SELECT user_id FROM emails
+    );
+
+The L<SQL::Abstract> documentation gives a few more examples
+of this.  Searching for a backslash and an opening square brace "\["
+will give you the examples.
+
+=head2 bind_param
+
+See bindtype in SQL::Abstract docs.  A way to easly integrate this
+with L<DBIx::ResultSet> has not yet been developed.
+
+=head2 Auto PKs
+
+Reading an automatically assigning PK after an INSERT is not currently
+supported and there really is no easy way to do this at this time.
+To support this we'll have to figure out a way to use L<DBIx::Class>'
+method of doing this.
+
+=head1 AUTHOR
+
+Aran Clary Deltac <bluefeet@gmail.com>
+
+=head1 LICENSE
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+

@@ -31,4 +31,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=DBIx-ResultSet
   repository: http://github.com/bluefeet/DBIx-ResultSet
-version: 0.10
+version: 0.11

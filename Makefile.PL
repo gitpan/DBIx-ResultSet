@@ -27,7 +27,7 @@ my %WriteMakefileArgs = (
                                            },
                        'ABSTRACT' => 'Lightweight SQL query building and execution.',
                        'EXE_FILES' => [],
-                       'VERSION' => '0.10',
+                       'VERSION' => '0.11',
                        'PREREQ_PM' => {
                                         'Data::Page' => '2.02',
                                         'SQL::Abstract' => '1.65',
