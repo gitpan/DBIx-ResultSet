@@ -1,5 +1,10 @@
 Revision history for Perl extension DBIx::ResultSet.
 
+0.12      2010-05-07
+ - The value of an auto incrementing column can now be retrieved
+   after an INSERT, but it currently only works for MySQL and SQLite.
+ - Fix some doc typos.
+
 0.11      2010-05-06
  - Add AUTHOR and LICENSE sections to modules.
  - Many documentation edits.

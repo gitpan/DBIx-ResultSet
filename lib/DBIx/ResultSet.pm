@@ -1,6 +1,6 @@
 package DBIx::ResultSet;
 BEGIN {
-  $DBIx::ResultSet::VERSION = '0.11';
+  $DBIx::ResultSet::VERSION = '0.12';
 }
 use Moose;
 use namespace::autoclean;
@@ -41,6 +41,9 @@ Unlike DBIx::Class, this module DOES expect you to be retrieving
 thousands and millions of rows.  It is designed for high-volume
 and optimized software, where the developers believe that writing
 effecient code and elegant code is not mutually exclusive.
+
+So, this module is not an ORM.  If you want an ORM use L<DBIx::Class>,
+it is superb.
 
 =cut
 
@@ -137,8 +140,6 @@ sub _do_select {
         $clauses->{offset},
     );
 }
-
-=head1 METHODS
 
 =head2 insert
 
@@ -308,7 +309,7 @@ sub count {
 =head2 column
 
     my $user_ids = $users_rs->column(
-        'user_id',                          # column to retrieve
+        'user_id', # column to retrieve
     );
     print 'User IDs: ' . join( ', ', @$user_ids );
 
@@ -402,7 +403,7 @@ sub select_sql {
 
 =head2 where_sql
 
-    my ($sql, @bind) = $users_rs->where_sql(['user_id', 'email', 'address']);
+    my ($sql, @bind) = $users_rs->search({ title => 'Manager' })->where_sql();
 
 This works just like select_sql(), but it only returns the
 WHERE portion of the SQL query.  This can be useful when you are
@@ -415,7 +416,7 @@ then the returned SQL will include those clauses as well.
 =cut
 
 sub where_sql {
-    my ($self, $fields) = @_;
+    my ($self) = @_;
     $self->_set_pager();
     my $clauses = $self->clauses();
     return $self->abstract->where(
@@ -424,6 +425,18 @@ sub where_sql {
         $clauses->{limit},
         $clauses->{offset},
     );
+}
+
+=head2 auto_pk
+
+    $users_rs->insert({ user_name=>'jdoe' });
+    my $user_id = $users_rs->auto_pk();
+
+=cut
+
+sub auto_pk {
+    my ($self) = @_;
+    return $self->connector->_auto_pk( $self->table() );
 }
 
 =head1 ATTRIBUTES
@@ -528,6 +541,14 @@ has 'clauses' => (
 __PACKAGE__->meta->make_immutable;
 1;
 __END__
+
+=head1 SEE ALSO
+
+=over
+
+=item * L<DBIx::Class::ResultSet::HashRef>
+
+=back
 
 =head1 AUTHOR
 

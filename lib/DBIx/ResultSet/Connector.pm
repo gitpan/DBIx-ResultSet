@@ -1,6 +1,6 @@
 package DBIx::ResultSet::Connector;
 BEGIN {
-  $DBIx::ResultSet::Connector::VERSION = '0.11';
+  $DBIx::ResultSet::Connector::VERSION = '0.12';
 }
 use Moose;
 use namespace::autoclean;
@@ -135,6 +135,27 @@ Returns the time in the DB's format.
 sub format_time {
     my ($self, $dt) = @_;
     return $self->datetime_formatter->format_time( $dt );
+}
+
+sub _auto_pk {
+    my ($self, $table) = @_;
+
+    my $driver = $self->dbix_connector->driver->{driver};
+
+    if ($driver eq 'mysql') {
+        return $self->run(sub{
+            my ($dbh) = @_;
+            return ($dbh->selectrow_array('SELECT LAST_INSERT_ID()'))[0];
+        });
+    }
+    elsif ($driver eq 'SQLite') {
+        return $self->run(sub{
+            my ($dbh) = @_;
+            return ($dbh->selectrow_array('SELECT LAST_INSERT_ROWID()'))[0];
+        });
+    }
+
+    croak 'Retrieving autoincrementing IDs from ' . $driver . ' is not supported';
 }
 
 =head1 ATTRIBUTES

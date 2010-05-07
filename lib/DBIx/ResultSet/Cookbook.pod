@@ -55,10 +55,14 @@ with L<DBIx::ResultSet> has not yet been developed.
 
 =head2 Auto PKs
 
-Reading an automatically assigning PK after an INSERT is not currently
-supported and there really is no easy way to do this at this time.
-To support this we'll have to figure out a way to use L<DBIx::Class>'
-method of doing this.
+Automatically inrementing primary key values may be retrieved after
+an insert by calling:
+
+    my $user_id = $users_rs->auto_pk();
+
+This is only supported by a couple database at the moment (MySQL, and
+SQLte), and more are planned in the future.  If you're database isn't yet
+supported ahn exception will be thrown.
 
 =head1 AUTHOR
 
