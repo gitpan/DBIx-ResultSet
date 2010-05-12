@@ -1,6 +1,6 @@
 package DBIx::ResultSet;
 BEGIN {
-  $DBIx::ResultSet::VERSION = '0.12';
+  $DBIx::ResultSet::VERSION = '0.13';
 }
 use Moose;
 use namespace::autoclean;
@@ -32,18 +32,8 @@ of SQL queries.  This is done by providing a thin wrapper around the
 L<SQL::Abstract>, L<DBIx::Connector>, L<DBI>, L<Data::Page>, and the
 DateTime::Format::* modules.
 
-I was inspired to write this module because I work in an environment
-where we really didn't want the heavy footprint of L<DBIx::Class>,
-but instead wanted many of the features of L<DBIx::Class::ResultSet>
-in a lightweight package.
-
-Unlike DBIx::Class, this module DOES expect you to be retrieving
-thousands and millions of rows.  It is designed for high-volume
-and optimized software, where the developers believe that writing
-effecient code and elegant code is not mutually exclusive.
-
-So, this module is not an ORM.  If you want an ORM use L<DBIx::Class>,
-it is superb.
+This module is not an ORM.  If you want an ORM use L<DBIx::Class>, it
+is superb.
 
 =cut
 
@@ -270,8 +260,8 @@ sub array_of_hash_rows {
 =head2 hash_of_hash_rows
 
     my $disabled_users = $rs->hash_of_hash_rows(
-        'user_name',                   # column to index the hash by
-        ['user_id', 'email', 'phone'], # fields to retrieve
+        'user_name',                                # column to key the hash by
+        ['user_id', 'user_name', 'email', 'phone'], # fields to retrieve
     );
     print $disabled_users->{jsmith}->{email};
 

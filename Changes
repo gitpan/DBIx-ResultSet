@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::ResultSet.
 
+0.13      2010-05-11
+ - Doc edits.
+
 0.12      2010-05-07
  - The value of an auto incrementing column can now be retrieved
    after an INSERT, but it currently only works for MySQL and SQLite.

@@ -1,6 +1,6 @@
 package DBIx::ResultSet::Connector;
 BEGIN {
-  $DBIx::ResultSet::Connector::VERSION = '0.12';
+  $DBIx::ResultSet::Connector::VERSION = '0.13';
 }
 use Moose;
 use namespace::autoclean;
@@ -182,7 +182,7 @@ has 'dbix_connector' => (
 
 =head2 abstract
 
-A L<SQL::Abstract::Limit> object for use by L<DBIx::ReesultSet>.
+A L<SQL::Abstract::Limit> object for use by L<DBIx::ResultSet>.
 
 =cut
 
