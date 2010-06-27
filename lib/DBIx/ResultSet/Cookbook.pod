@@ -10,7 +10,7 @@ DBIx::ResultSet::Cookbook - Common recipes for DBIx::ResultSet.
 Joins are currently not supported.  This is mostly because L<SQL::Abstract>
 does not support them, and I've yet to have the time or impetus to try
 and dig in to how L<DBIx::Class::ResultSet> does it.  Also, in many cases
-a subselect is a better choice.
+a L<subselect|Subselects> is a better choice.
 
 Another option is to use L<DBIx::ResultSet>'s where_sql() to produce the WHERE
 portion of the SQL while still being able to write the FROM/JOIN portion of the SQL
@@ -36,7 +36,7 @@ a very elegant way to use them:
         user_id => {-in => \[ $emails_rs->select_sql(['user_id']) ]},
     });
 
-The above example build a SQL query like this:
+The above example builds a SQL query like this:
 
     SELECT *
     FROM users
@@ -50,7 +50,7 @@ will give you the examples.
 
 =head2 bind_param
 
-See bindtype in SQL::Abstract docs.  A way to easly integrate this
+See L<bindtype|SQL::Abstract/bindtype> in SQL::Abstract docs.  A way to easly integrate this
 with L<DBIx::ResultSet> has not yet been developed.
 
 =head2 Auto PKs
@@ -62,7 +62,67 @@ an insert by calling:
 
 This is only supported by a couple database at the moment (MySQL, and
 SQLte), and more are planned in the future.  If you're database isn't yet
-supported ahn exception will be thrown.
+supported an exception will be thrown.
+
+=head2 Transactions
+
+The L<DBIx::ResultSet::Connector> class provides an interface to
+facilitate robust transaction management.  This is done by using
+L<DBIx::Connector>, which is available via the L<dbix_connector|DBIx::ResultSet::Connector/dbix_connector>
+attribute.  Several of DBIx::Connector's methods are made available
+directly on the DBIx::ResultSet::Connector object.
+
+So, let's get some data and update a record within a transation:
+
+    my $connector = DBIx::ResultSet::Connector->new( ... );
+    $connector->txn(sub{
+        my $users = $connector->resultset('users');
+        my $user_permissionis = $connector->resultset('user_permissions');
+        my $admin_permissions = $user_permissions->search({ perm => 'ADMIN' });
+
+        my $admin_users = $users->search({ user_id => { -in => [
+            $admin_permissions->select_sql('user_id')
+        ] } });
+
+        $admin_users->update({ is_admin => 1 });
+        # Executes: UPDATE users SET is_admin = ?
+        #   WHERE user_id IN (SELECT user_id FROM user_permissions WHERE perm = ?);
+    });
+
+L<DBIx::Connector> will rollback the transaction if there are any errors
+and then throw the error, otherwise the transaction will be commited.
+
+Take a closer look at the L<DBIx::Connector> docs to get an idea of what
+you can do.
+
+=head2 Connection Handling
+
+All methods in L<DBIx::ResultSet> that need a DBI database handle get it
+via L<DBIx::Connector>'s run() method.  The reason for this is that the
+run method doesn't do anything fancy, it just returns the dbh if it has it,
+or connects if it doesn't.  It doesn't try to ping the database.  So, when
+using L<DBIx::ResultSet> it is highly recommended that you use L<DBIx::ResultSet::Connector>'s
+txn(), svp(), and/or run() (with fixup/ping).
+
+So, in its simplest form, just wrap your work in a run() w/ a ping call:
+
+    $connector->run(ping=>sub{
+        ...
+    });
+
+But, ping has its drawbacks as every time that block is entered the database
+is pinged.  A better solution is to use fixup, but you need to make sure that
+your code is written in such a way that it is OK that the code get called more
+then once if the database goes down.  What fixup does is it will attempt to run
+your code, and if the database connection is lost, it will re-connect and then
+try to run your code again.
+
+There are many ways to go about this.  If you're just writing a quick and
+dirty script, don't worry about it, but if you're writing something that
+needs to handle connections robustly and that fails gracefully, you'll need
+to come up with a scheme for handling your connections.
+
+More details on all this can be found in the L<DBIx::Connector> docs.
 
 =head1 AUTHOR
 

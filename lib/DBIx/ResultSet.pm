@@ -1,6 +1,6 @@
 package DBIx::ResultSet;
 BEGIN {
-  $DBIx::ResultSet::VERSION = '0.13';
+  $DBIx::ResultSet::VERSION = '0.14';
 }
 use Moose;
 use namespace::autoclean;
@@ -35,6 +35,8 @@ DateTime::Format::* modules.
 This module is not an ORM.  If you want an ORM use L<DBIx::Class>, it
 is superb.
 
+Some tips and tricks are recorded in the L<cookbook|DBIx::ResultSet::Cookbook>.
+
 =cut
 
 use Clone qw( clone );
@@ -42,7 +44,7 @@ use List::MoreUtils qw( uniq );
 use Carp qw( croak );
 use Data::Page;
 
-=head1 METHODS
+=head1 SEARCH METHOD
 
 =head2 search
 
@@ -53,6 +55,11 @@ use Data::Page;
 Returns a new result set object that overlays the passed in where clause
 on top of the old where clause, creating a new result set.  The original
 result set's where clause is left unmodified.
+
+search() never executes SQL queries.  You can call search() as many times
+as you like and iteratively build a resultset as much as you want, but no
+SQL will be issued until you call one of the L<manipulation|MANIPULATION METHODS>
+or L<retrieval|RETRIEVAL METHODS> methods.
 
 =cut
 
@@ -131,11 +138,16 @@ sub _do_select {
     );
 }
 
+=head1 MANIPULATION METHODS
+
+These methods create, change, or remove data.
+
 =head2 insert
 
     $users_rs->insert(
         { user_name=>'bob2003', email=>'bob@example.com' }, # fields to insert
     );
+    # Executes: INSERT INTO users (user_name, email) VALUES (?, ?);
 
 Creates and executes an INSERT statement.
 
@@ -153,6 +165,10 @@ sub insert {
     $users_rs->update(
         { phone => '555-1234' }, # fields to update
     );
+    # Executes: UPDATE users SET phone = ?;
+
+    $users_rs->search({ is_admin=>1 })->update({ phone=>'555-1234 });
+    # Executes: UPDATE users SET phone = ? WHERE is_admin = ?;
 
 Creates and executes an UPDATE statement.
 
@@ -169,9 +185,11 @@ sub update {
 
     # Delete all users!
     $users_rs->delete();
+    # Executes: DELETE FROM users;
     
     # Or just the ones that are disabled.
-    #users_rs->search({status=>0})->delete();
+    users_rs->search({status=>0})->delete();
+    # Executes: DELETE FROM users WHERE status = 0;
 
 Creates and executes a DELETE statement.
 
@@ -183,6 +201,28 @@ sub delete {
     $self->_dbi_execute( 'do', $sql, \@bind );
     return;
 }
+
+=head2 auto_pk
+
+    $users_rs->insert({ user_name=>'jdoe' });
+    my $user_id = $users_rs->auto_pk();
+    # Executes (MySQL):  SELECT LAST_INSERT_ID();
+    # Executes (SQLite): SELECT LAST_INSERT_ROWID();
+    # etc...
+
+Currently only MySQL and SQLite are supported.  Oracle support will
+be added soon, and other databases making their way in as needed.
+
+=cut
+
+sub auto_pk {
+    my ($self) = @_;
+    return $self->connector->_auto_pk( $self->table() );
+}
+
+=head1 RETRIEVAL METHODS
+
+These methods provide common shortcuts for retrieving data.
 
 =head2 array_row
 
@@ -202,7 +242,9 @@ looking up by the table's primary key(s).
 sub array_row {
     my ($self, $fields) = @_;
     my ($sql, @bind) = $self->_do_select( $fields );
-    return [ $self->_dbi_execute( 'selectrow_array', $sql, \@bind ) ];
+    my @row = $self->_dbi_execute( 'selectrow_array', $sql, \@bind );
+    return if !@row;
+    return \@row;
 }
 
 =head2 hash_row
@@ -314,6 +356,11 @@ sub column {
     return $self->_dbi_execute( 'selectcol_arrayref', $sql, \@bind );
 }
 
+=head1 STH METHODS
+
+Get L<DBI> statement handles when you have more specialized
+needs.
+
 =head2 select_sth
 
     my ($sth, @bind) = $rs->select_sth(
@@ -376,6 +423,11 @@ sub bind_values {
     return $self->abstract->values( $fields );
 }
 
+=head1 SQL METHODS
+
+These methods just produce SQL, allowing you to have complete
+control of how it is executed.
+
 =head2 select_sql
 
     my ($sql, @bind) = $users_rs->select_sql(['email', 'age']);
@@ -417,23 +469,12 @@ sub where_sql {
     );
 }
 
-=head2 auto_pk
-
-    $users_rs->insert({ user_name=>'jdoe' });
-    my $user_id = $users_rs->auto_pk();
-
-=cut
-
-sub auto_pk {
-    my ($self) = @_;
-    return $self->connector->_auto_pk( $self->table() );
-}
-
 =head1 ATTRIBUTES
 
 =head2 connector
 
-The L<DBIx::ResultSet::Connector> object.
+The L<DBIx::ResultSet::Connector> object that this resultset
+is bound too.
 
 =cut
 
@@ -457,7 +498,7 @@ has 'connector' => (
 
 A L<Data::Page> object pre-populated based on page() and rows().  If
 page() has not been specified then trying to access page() will throw
-a fatal error.
+an error.
 
 The total_entries and last_page methods are proxied from the pager in
 to this class so that you can call:
@@ -474,6 +515,7 @@ has 'pager' => (
     is         => 'ro',
     isa        => 'Data::Page',
     lazy_build => 1,
+    init_arg   => undef,
     handles => [qw(
         total_entries
         last_page

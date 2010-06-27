@@ -1,5 +1,12 @@
 Revision history for Perl extension DBIx::ResultSet.
 
+0.14      2010-06-27
+ - Rearranged resultset methods in to logical sections.
+ - Added a couple sections to the cookbook.
+ - row_array() was still returning an array ref even if a record
+   was not found.
+ - Use init_arg where appropriate.
+
 0.13      2010-05-11
  - Doc edits.
 
@@ -41,22 +48,22 @@ Revision history for Perl extension DBIx::ResultSet.
  - Add pager support to ResultSet, just like DBIC.
 
 0.04      2010-04-23
-  - More documentation fixes.
-  - Fix SQLAbstract trait so that it actually works.
-  - Add automated tests.
+ - More documentation fixes.
+ - Fix SQLAbstract trait so that it actually works.
+ - Add automated tests.
 
 0.03      2010-04-22
-  - Lots of documentation edits.
-  - Use Traits::SQLAbstract in the ResultSet class.
-  - New methods: select_sth, insert_sth, update_sth, delete_sth, and bind_values.
+ - Lots of documentation edits.
+ - Use Traits::SQLAbstract in the ResultSet class.
+ - New methods: select_sth, insert_sth, update_sth, delete_sth, and bind_values.
 
 0.02      2010-04-22
-  - Fix $rs->column() to call column() instead of count().
-  - Make the various SQLAbstract methods more consistant
-    (hash_row instead of row_hash, etc).
-  - Move some result set code in to a new ResultSet trait.
-  - Fix "SQL::Astract" dependency.
+ - Fix $rs->column() to call column() instead of count().
+ - Make the various SQLAbstract methods more consistant
+   (hash_row instead of row_hash, etc).
+ - Move some result set code in to a new ResultSet trait.
+ - Fix "SQL::Astract" dependency.
 
 0.01      2010-04-21
-  - First release.
+ - First release.
 
