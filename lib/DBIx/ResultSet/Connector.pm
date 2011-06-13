@@ -1,6 +1,6 @@
 package DBIx::ResultSet::Connector;
 BEGIN {
-  $DBIx::ResultSet::Connector::VERSION = '0.14';
+  $DBIx::ResultSet::Connector::VERSION = '0.15';
 }
 use Moose;
 use namespace::autoclean;

@@ -1,6 +1,6 @@
 package DBIx::ResultSet;
 BEGIN {
-  $DBIx::ResultSet::VERSION = '0.14';
+  $DBIx::ResultSet::VERSION = '0.15';
 }
 use Moose;
 use namespace::autoclean;
@@ -11,10 +11,10 @@ DBIx::ResultSet - Lightweight SQL query building and execution.
 
 =head1 SYNOPSIS
 
-    use DBIx::ResultSet::Connector;
+    use DBIx::ResultSet;
     
     # Same arguments as DBI and DBIx::Connector.
-    my $connector = DBIx::ResultSet::Connector->new(
+    my $connector = DBIx::ResultSet->connect(
         $dsn, $user, $pass,
         $attr, #optional
     );
@@ -27,8 +27,8 @@ DBIx::ResultSet - Lightweight SQL query building and execution.
 
 =head1 DESCRIPTION
 
-This module provides an API that simpliefies the creation and execution
-of SQL queries.  This is done by providing a thin wrapper around the
+This module provides an API that simplifies the creation and execution
+of SQL queries.  This is done by providing a thin wrapper around
 L<SQL::Abstract>, L<DBIx::Connector>, L<DBI>, L<Data::Page>, and the
 DateTime::Format::* modules.
 
@@ -44,7 +44,21 @@ use List::MoreUtils qw( uniq );
 use Carp qw( croak );
 use Data::Page;
 
-=head1 SEARCH METHOD
+=head1 CONNECTING
+
+In order to start using this module you must first connect to your database.
+This is done using the connect() class method:
+
+    # Same arguments as DBI and DBIx::Connector.
+    my $connector = DBIx::ResultSet->connect(
+        $dsn, $user, $pass,
+        $attr, #optional
+    );
+
+The connect() class method is a shortcut for creating a L<DBIx::ResutSet::Connector>
+object.
+
+=head1 SEARCH METHODS
 
 =head2 search
 
