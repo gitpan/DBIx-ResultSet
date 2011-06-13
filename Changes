@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::ResultSet.
 
+0.16      2011-06-13
+ - Actually add connect() method.
+
 0.15      2011-06-13
  - Provide a DBIx::ResultSet->connect() shortcut.
  - Fix "simpliefies" typo (thanks Terrence).

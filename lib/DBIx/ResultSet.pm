@@ -1,6 +1,6 @@
 package DBIx::ResultSet;
 BEGIN {
-  $DBIx::ResultSet::VERSION = '0.15';
+  $DBIx::ResultSet::VERSION = '0.16';
 }
 use Moose;
 use namespace::autoclean;
@@ -43,6 +43,7 @@ use Clone qw( clone );
 use List::MoreUtils qw( uniq );
 use Carp qw( croak );
 use Data::Page;
+use DBIx::ResultSet::Connector;
 
 =head1 CONNECTING
 
@@ -57,6 +58,13 @@ This is done using the connect() class method:
 
 The connect() class method is a shortcut for creating a L<DBIx::ResutSet::Connector>
 object.
+
+=cut
+
+sub connect {
+    my $self = shift;
+    return DBIx::ResultSet::Connector->new( @_ );
+}
 
 =head1 SEARCH METHODS
 

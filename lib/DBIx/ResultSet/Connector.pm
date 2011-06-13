@@ -1,6 +1,6 @@
 package DBIx::ResultSet::Connector;
 BEGIN {
-  $DBIx::ResultSet::Connector::VERSION = '0.15';
+  $DBIx::ResultSet::Connector::VERSION = '0.16';
 }
 use Moose;
 use namespace::autoclean;
@@ -47,20 +47,12 @@ resultset() method.
 
 =cut
 
+use DBIx::ResultSet;
 use DBIx::Connector;
 use SQL::Abstract::Limit;
-use DBIx::ResultSet;
 use Module::Load;
 use Carp qw( croak );
-
-use MooseX::Types -declare => [qw(
-    DBIxConnector
-)];
-
-use MooseX::Types::Moose qw( ArrayRef );
-
-class_type DBIxConnector, { class => 'DBIx::Connector' };
-coerce DBIxConnector, from ArrayRef, via { DBIx::Connector->new( @$_ ) };
+use Moose::Util::TypeConstraints;
 
 around BUILDARGS => sub {
     my $orig = shift;
@@ -167,9 +159,16 @@ txn(), and svp() methods are proxied.
 
 =cut
 
+subtype 'DBIxResultSetConnectorDBIxConnector',
+    as class_type('DBIx::Connector');
+
+coerce 'DBIxResultSetConnectorDBIxConnector',
+    from 'ArrayRef',
+        via { DBIx::Connector->new( @$_ ) };
+
 has 'dbix_connector' => (
     is => 'ro',
-    isa => DBIxConnector,
+    isa => 'DBIxResultSetConnectorDBIxConnector',
     coerce => 1,
     required => 1,
     handles => [qw(
