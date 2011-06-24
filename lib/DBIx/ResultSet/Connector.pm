@@ -1,6 +1,6 @@
 package DBIx::ResultSet::Connector;
 BEGIN {
-  $DBIx::ResultSet::Connector::VERSION = '0.16';
+  $DBIx::ResultSet::Connector::VERSION = '0.17';
 }
 use Moose;
 use namespace::autoclean;
@@ -11,10 +11,10 @@ DBIx::ResultSet::Connector - Access result sets via DBIx::Connector.
 
 =head1 SYNOPSIS
 
-    use DBIx::ResultSet::Connector;
+    use DBIx::ResultSet;
     
     # Same arguments as DBI and DBIx::Connector.
-    my $connector = DBIx::ResultSet::Connector->new(
+    my $connector = DBIx::ResultSet->connect(
         $dsn, $user, $pass,
         $attr, #optional
     );
@@ -52,24 +52,25 @@ use DBIx::Connector;
 use SQL::Abstract::Limit;
 use Module::Load;
 use Carp qw( croak );
-use Moose::Util::TypeConstraints;
-
-around BUILDARGS => sub {
-    my $orig = shift;
-    my $class = shift;
-
-    # If the first argument looks like a DSN then assume that we're
-    # being called in DBIx::Connector style.
-    if (@_ and $_[0]=~m{:}) {
-        return $class->$orig(
-            dbix_connector => [ @_ ],
-        );
-    }
-
-    return $class->$orig(@_);
-};
 
 =head1 METHODS
+
+=head2 connect
+
+This is the actual connect method that is called by L<DBIx::ResultSet>
+See <DBIx::RestultSet/connect> for more information.
+
+=cut
+
+sub connect {
+    my ($class, $dsn, $username, $password, $attr) = @_;
+    $attr ||= {};
+    $attr->{AutoCommit} = 1 if !exists( $attr->{AutoCommit} );
+    my $mode = delete( $attr->{ConnectionMode} ) || 'fixup';
+    my $connector = DBIx::Connector->new( $dsn, $username, $password, $attr );
+    $connector->mode( $mode );
+    return $class->new( dbix_connector=>$connector );
+}
 
 =head2 resultset
 
@@ -159,17 +160,9 @@ txn(), and svp() methods are proxied.
 
 =cut
 
-subtype 'DBIxResultSetConnectorDBIxConnector',
-    as class_type('DBIx::Connector');
-
-coerce 'DBIxResultSetConnectorDBIxConnector',
-    from 'ArrayRef',
-        via { DBIx::Connector->new( @$_ ) };
-
 has 'dbix_connector' => (
     is => 'ro',
-    isa => 'DBIxResultSetConnectorDBIxConnector',
-    coerce => 1,
+    isa => 'DBIx::Connector',
     required => 1,
     handles => [qw(
         dbh

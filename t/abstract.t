@@ -5,7 +5,7 @@ use warnings;
 use Test::More;
 use DBIx::ResultSet::Connector;
 
-my $connector = DBIx::ResultSet::Connector->new( 'dbi:SQLite:dbname=t/test.db', '', '' );
+my $connector = DBIx::ResultSet->connect( 'dbi:SQLite:dbname=t/test.db', '', '' );
 
 $connector->run(sub{
     my ($dbh) = @_;

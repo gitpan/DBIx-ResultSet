@@ -6,7 +6,7 @@ use Test::More;
 use DBIx::ResultSet::Connector;
 use DateTime;
 
-my $connector = DBIx::ResultSet::Connector->new( 'dbi:SQLite:dbname=t/test.db', '', '' );
+my $connector = DBIx::ResultSet->connect( 'dbi:SQLite:dbname=t/test.db', '', '' );
 
 is(
     $connector->format_date(DateTime->new(year=>2005, month=>9, day=>23)),

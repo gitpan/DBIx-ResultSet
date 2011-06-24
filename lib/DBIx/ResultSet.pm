@@ -1,6 +1,6 @@
 package DBIx::ResultSet;
 BEGIN {
-  $DBIx::ResultSet::VERSION = '0.16';
+  $DBIx::ResultSet::VERSION = '0.17';
 }
 use Moose;
 use namespace::autoclean;
@@ -47,8 +47,8 @@ use DBIx::ResultSet::Connector;
 
 =head1 CONNECTING
 
-In order to start using this module you must first connect to your database.
-This is done using the connect() class method:
+In order to start using this module you must first configure the connection to your
+database.  This is done using the connect() class method:
 
     # Same arguments as DBI and DBIx::Connector.
     my $connector = DBIx::ResultSet->connect(
@@ -56,14 +56,35 @@ This is done using the connect() class method:
         $attr, #optional
     );
 
-The connect() class method is a shortcut for creating a L<DBIx::ResutSet::Connector>
-object.
+The connect() class method is a shortcut for creating a L<DBIx::ResultSet::Connector>
+object.  When created this way, the AutoCommit DBI attribute will default to 1.
+This is done per the strong recommendations by L<DBIx::Connector/new>.
+
+By default the underlying L<DBIx::Connector> object will be called with mode('fixup').
+While not recommended, you can change the default connection mode by specifying the
+ConnectionMode attribute, as in:
+
+    my $connector = DBIx::ResultSet->connect(
+        $dsn, $user, $pass,
+        { ConnectionMode => 'ping' },
+    );
+
+Alternatively you could create a L<DBIx::ResultSet::Connector> object directly and
+pass your own custom-rolled L<DBIx::Connector> object.  For example:
+
+    my $dbix_connector = DBIx::Connector->new(
+        $dsn, $username, $password,
+        { AutoCommit => 1 },
+    );
+    my $connector = DBIx::ResultSet::Connector->new(
+        dbix_connector => $dbix_connector,
+    );
 
 =cut
 
 sub connect {
     my $self = shift;
-    return DBIx::ResultSet::Connector->new( @_ );
+    return DBIx::ResultSet::Connector->connect( @_ );
 }
 
 =head1 SEARCH METHODS
@@ -249,7 +270,7 @@ These methods provide common shortcuts for retrieving data.
 =head2 array_row
 
     my $user = $users_rs->search({ user_id => 32 })->array_row(
-        ['created', 'email', 'phone'], # fields to retrieve
+        ['created', 'email', 'phone'], # optional, fields to retrieve
     );
     print $user->[1]; # email
 
@@ -272,7 +293,7 @@ sub array_row {
 =head2 hash_row
 
     my $user = $users_rs->search({ user_id => 32 })->hash_row(
-        ['created', 'email', 'phone'], # fields to retrieve
+        ['created', 'email', 'phone'], # optional, fields to retrieve
     );
     print $user->{email}; # email
 
@@ -290,7 +311,7 @@ sub hash_row {
 =head2 array_of_array_rows
 
     my $disabled_users = $users_rs->array_of_array_rows(
-        ['user_id', 'email', 'phone'], # fields to retrieve
+        ['user_id', 'email', 'phone'], # optional, fields to retrieve
     );
     print $disabled_users->[2]->[1];
 
@@ -307,7 +328,7 @@ sub array_of_array_rows {
 =head2 array_of_hash_rows
 
     my $disabled_users = $rs->array_of_hash_rows(
-        ['user_id', 'email', 'phone'], # fields to retrieve
+        ['user_id', 'email', 'phone'], # optional, fields to retrieve
     );
     print $disabled_users->[2]->{email};
 
@@ -325,7 +346,7 @@ sub array_of_hash_rows {
 
     my $disabled_users = $rs->hash_of_hash_rows(
         'user_name',                                # column to key the hash by
-        ['user_id', 'user_name', 'email', 'phone'], # fields to retrieve
+        ['user_id', 'user_name', 'email', 'phone'], # optional, fields to retrieve
     );
     print $disabled_users->{jsmith}->{email};
 
@@ -386,7 +407,7 @@ needs.
 =head2 select_sth
 
     my ($sth, @bind) = $rs->select_sth(
-        ['user_name', 'user_id'], # fields to retrieve
+        ['user_name', 'user_id'], # optional, fields to retrieve
     );
     $sth->execute( @bind );
     $sth->bind_columns( \my( $user_name, $user_id ) );
@@ -452,7 +473,9 @@ control of how it is executed.
 
 =head2 select_sql
 
-    my ($sql, @bind) = $users_rs->select_sql(['email', 'age']);
+    my ($sql, @bind) = $users_rs->select_sql(
+        ['email', 'age'], # optional, fields to retrieve
+    );
 
 Returns the SQL and bind values for a SELECT statement.  This is
 useful if you want to handle DBI yourself, or for building subselects.

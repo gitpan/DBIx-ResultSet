@@ -16,7 +16,7 @@ Another option is to use L<DBIx::ResultSet>'s where_sql() to produce the WHERE
 portion of the SQL while still being able to write the FROM/JOIN portion of the SQL
 with raw SQL.  For example:
 
-    my ($where_sql, @bind) = $users_rs->search({ 'u.status' => 1});
+    my ($where_sql, @bind) = $users_rs->search({ 'u.status' => 1})->where_sql();
     
     my $sth = $dbh->prepare(qq[
         SELECT u.user_id, e.sent_date
@@ -33,7 +33,9 @@ L<SQL::Abstract> supports subselects natively, and L<DBIx::ResultSet> provides
 a very elegant way to use them:
 
     my $emailed_users_rs = $users_rs->search({
-        user_id => {-in => \[ $emails_rs->select_sql(['user_id']) ]},
+        user_id => {-in => \[
+            $emails_rs->select_sql(['user_id'])
+        ]},
     });
 
 The above example builds a SQL query like this:
@@ -74,7 +76,7 @@ directly on the DBIx::ResultSet::Connector object.
 
 So, let's get some data and update a record within a transation:
 
-    my $connector = DBIx::ResultSet::Connector->new( ... );
+    my $connector = DBIx::ResultSet->connect( ... );
     $connector->txn(sub{
         my $users = $connector->resultset('users');
         my $user_permissionis = $connector->resultset('user_permissions');
@@ -98,29 +100,34 @@ you can do.
 =head2 Connection Handling
 
 All methods in L<DBIx::ResultSet> that need a DBI database handle get it
-via L<DBIx::Connector>'s run() method.  The reason for this is that the
-run method doesn't do anything fancy, it just returns the dbh if it has it,
-or connects if it doesn't.  It doesn't try to ping the database.  So, when
-using L<DBIx::ResultSet> it is highly recommended that you use L<DBIx::ResultSet::Connector>'s
-txn(), svp(), and/or run() (with fixup/ping).
+via DBIx::Connector's L<run()|DBIx::Connector/run> method.  It is highly
+recommended that you acquire a solid understanding of how DBIx::Connector
+works and how to use it properly.  Once you have, you'll find that there
+are many ways in which you can control database pings, transactions, and
+lost connection handling.
 
-So, in its simplest form, just wrap your work in a run() w/ a ping call:
+By default the underlying L<DBIx::Connector> object will be set with a
+connection mode of 'fixup'.  This is typically what most people want.  In
+this setup if the connection is disconnected from the database then it
+will be automatically re-connected and the code that the run block was
+attempting to execute will be re-executed.  This means that in the
+following:
 
-    $connector->run(ping=>sub{
-        ...
+    $connector->run(sub{
+        send_email( ... );
+        $connector->resultset('email_log')->insert(...);
     });
 
-But, ping has its drawbacks as every time that block is entered the database
-is pinged.  A better solution is to use fixup, but you need to make sure that
-your code is written in such a way that it is OK that the code get called more
-then once if the database goes down.  What fixup does is it will attempt to run
-your code, and if the database connection is lost, it will re-connect and then
-try to run your code again.
+It is possible that the e-mail would get sent TWICE if the database connection
+is lost.  This is because the lost database connection isn't deteceted until we
+actually try to do something with the database, in this case an INSERT.  So,
+when under the 'fixup' connection mode one solution is to change the order of
+your code to first insert the log, then send the e-mail.
 
-There are many ways to go about this.  If you're just writing a quick and
-dirty script, don't worry about it, but if you're writing something that
-needs to handle connections robustly and that fails gracefully, you'll need
-to come up with a scheme for handling your connections.
+Another solution is to use the 'ping' connection mode which will validate that
+the database connection is healthy before executing the code block.  But, this
+still isn't 100% reliable because a database connection could potentially be
+lost at any time.
 
 More details on all this can be found in the L<DBIx::Connector> docs.
 

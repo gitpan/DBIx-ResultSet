@@ -31,4 +31,4 @@ requires:
 resources:
   bugtracker: https://github.com/bluefeet/DBIx-ResultSet/issues
   repository: git://github.com/bluefeet/DBIx-ResultSet.git
-version: 0.16
+version: 0.17

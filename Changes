@@ -1,5 +1,14 @@
 Revision history for Perl extension DBIx::ResultSet.
 
+0.17      2011-06-24
+ - Get rid of nasty type coercion in favor of providing two separate
+   interfaces for connecting.
+ - Various documentation cleanups.
+ - Default the underlying DBIx::Connector object to having the
+   connection mode 'fixup'.
+ - Provide a way, via connect(), to override the default connection
+   mode.
+
 0.16      2011-06-13
  - Actually add connect() method.
 
